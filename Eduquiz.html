@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Eduquiz</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Quicksand', sans-serif;
+      margin: 0;
+      padding: 40px 20px;
+      background: #fdf6e3;
+      color: #4e342e;
+    }
+
+    h1 {
+      text-align: center;
+      font-weight: 600;
+      font-size: 2.5em;
+      margin-bottom: 30px;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .form-group {
+      margin: 15px 0;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      font-size: 1em;
+      border: 1px solid #d7ccc8;
+      border-radius: 5px;
+      background: #fffaf0;
+      color: #4e342e;
+    }
+
+    button {
+      padding: 10px 25px;
+      background-color: #8d6e63;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 1em;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      margin: 5px 5px 0 0;
+    }
+
+    button:hover {
+      background-color: #6d4c41;
+    }
+
+    hr {
+      border: none;
+      height: 1px;
+      background: #d7ccc8;
+      margin: 40px 0;
+    }
+
+    .actions {
+      text-align: right;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .flashcard-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 30px;
+    }
+
+    .flashcard-container {
+      perspective: 1000px;
+      width: 100%;
+      max-width: 400px;
+      height: 250px;
+      margin-bottom: 30px;
+    }
+
+    .flashcard {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.6s;
+      cursor: pointer;
+    }
+
+    .flashcard.flip {
+      transform: rotateY(180deg);
+    }
+
+    .card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 8px;
+      border: 1px solid #d7ccc8;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      background: #fffaf0;
+      font-size: 1.2em;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+
+    .card-back {
+      transform: rotateY(180deg);
+    }
+
+    .navigation {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    #flashcard-count {
+      font-size: 0.95em;
+      margin-top: 15px;
+      color: #6d4c41;
+    }
+
+    .watermark {
+      position: fixed;
+      bottom: 10px;
+      right: 15px;
+      font-size: 0.7em;
+      color: #4e342e;
+      opacity: 0.2;
+      pointer-events: none;
+      user-select: none;
+      z-index: 999;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Eduquiz</h1>
+
+    <div id="create-mode">
+      <div class="form-group">
+        <label for="question">Question:</label>
+        <input type="text" id="question" placeholder="Enter your question">
+      </div>
+      <div class="form-group">
+        <label for="answer">Answer:</label>
+        <textarea id="answer" placeholder="Enter the answer"></textarea>
+      </div>
+      <div class="actions">
+        <button onclick="addFlashcard()">Add Flashcard</button>
+        <button onclick="clearAll()">Clear All</button>
+        <button onclick="startQuiz()">Start Quiz</button>
+      </div>
+      <div id="flashcard-count"></div>
+    </div>
+
+    <div id="study-mode" class="hidden">
+      <div class="flashcard-section">
+        <div class="flashcard-container" onclick="flipCard()">
+          <div id="flashcard" class="flashcard">
+            <div class="card-face card-front" id="card-front"></div>
+            <div class="card-face card-back" id="card-back"></div>
+          </div>
+        </div>
+        <div class="navigation">
+          <button onclick="prevCard()">Previous</button>
+          <button onclick="nextCard()">Next</button>
+          <button onclick="exitQuiz()">Exit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Watermark -->
+  <div class="watermark">Created by: Chenuli Tissera | On: 5/4/25</div>
+
+  <script>
+    let flashcards = JSON.parse(localStorage.getItem("flashcards")) || [];
+    let currentCard = 0;
+    let isFlipped = false;
+
+    function saveFlashcards() {
+      localStorage.setItem("flashcards", JSON.stringify(flashcards));
+      updateCardCount();
+    }
+
+    function updateCardCount() {
+      const countEl = document.getElementById("flashcard-count");
+      countEl.textContent = `${flashcards.length} flashcard(s) saved.`;
+    }
+
+    function addFlashcard() {
+      const questionInput = document.getElementById("question");
+      const answerInput = document.getElementById("answer");
+
+      const question = questionInput.value.trim();
+      const answer = answerInput.value.trim();
+
+      if (!question || !answer) {
+        alert("Please fill in both the question and the answer.");
+        return;
+      }
+
+      flashcards.push({ question, answer });
+      saveFlashcards();
+
+      questionInput.value = "";
+      answerInput.value = "";
+    }
+
+    function clearAll() {
+      if (confirm("Are you sure you want to delete all flashcards?")) {
+        flashcards = [];
+        saveFlashcards();
+        updateCardCount();
+      }
+    }
+
+    function startQuiz() {
+      if (flashcards.length === 0) {
+        alert("Add at least one flashcard to start.");
+        return;
+      }
+
+      currentCard = 0;
+      isFlipped = false;
+      document.getElementById("create-mode").classList.add("hidden");
+      document.getElementById("study-mode").classList.remove("hidden");
+      renderCard();
+    }
+
+    function exitQuiz() {
+      document.getElementById("study-mode").classList.add("hidden");
+      document.getElementById("create-mode").classList.remove("hidden");
+    }
+
+    function renderCard() {
+      const front = document.getElementById("card-front");
+      const back = document.getElementById("card-back");
+      const card = flashcards[currentCard];
+
+      front.textContent = card.question;
+      back.textContent = card.answer;
+
+      document.getElementById("flashcard").classList.remove("flip");
+      isFlipped = false;
+    }
+
+    function flipCard() {
+      const card = document.getElementById("flashcard");
+      isFlipped = !isFlipped;
+      card.classList.toggle("flip", isFlipped);
+    }
+
+    function nextCard() {
+      if (currentCard < flashcards.length - 1) {
+        currentCard++;
+        renderCard();
+      }
+    }
+
+    function prevCard() {
+      if (currentCard > 0) {
+        currentCard--;
+        renderCard();
+      }
+    }
+
+    updateCardCount();
+  </script>
+</body>
+</html>
+
